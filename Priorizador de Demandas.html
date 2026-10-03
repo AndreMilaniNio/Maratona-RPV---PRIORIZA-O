@@ -1,0 +1,423 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Priorizador de Demandas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: cabeçalho enxuto, faixa "o que muda", barra de busca com chips, fila em dois grupos (atendem hoje / aguardam) e detalhe lateral. */
+:root {
+  --bg: #f1f4f9;
+  --surface: #ffffff;
+  --surface-2: #f6f8fc;
+  --ink: #14213a;
+  --ink-2: #5d6a84;
+  --line: #e2e7f0;
+  --primary: #1f46b4;
+  --primary-ink: #ffffff;
+  --primary-soft: #e6ecfb;
+  --hot: #d9480f;
+  --hot-soft: #fdebe2;
+  --ring-bg: #e6eaf2;
+  --shadow: 0 1px 2px rgba(20,33,58,.05), 0 6px 20px rgba(20,33,58,.06);
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1322; --surface: #131e34; --surface-2: #182540; --ink: #e8eefb; --ink-2: #93a2c0; --line: #25324f;
+    --primary: #8aa9ff; --primary-ink: #0b1322; --primary-soft: #1c2d57; --hot: #ff9c63; --hot-soft: #3a2519;
+    --ring-bg: #263556; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1322; --surface: #131e34; --surface-2: #182540; --ink: #e8eefb; --ink-2: #93a2c0; --line: #25324f;
+  --primary: #8aa9ff; --primary-ink: #0b1322; --primary-soft: #1c2d57; --hot: #ff9c63; --hot-soft: #3a2519;
+  --ring-bg: #263556; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 14px; line-height: 1.45; padding-inline: 16px; padding-block: 20px 40px; }
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.muted { color: var(--ink-2); }
+
+header.top { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; }
+header.top .sub { font-size: 13px; color: var(--ink-2); }
+.tag { font-size: 11px; font-weight: 600; color: var(--hot); background: var(--hot-soft); border-radius: 999px; padding: 3px 10px; }
+
+/* O que muda */
+.shift { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.shift-card { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; gap: 16px; text-align: left; border: 1px solid transparent; cursor: pointer; min-width: 0; }
+.shift-card:hover { border-color: var(--primary); }
+.shift-card .t1 { font-weight: 600; font-size: 15px; }
+.shift-card .t2 { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.move { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); white-space: nowrap; }
+.move .a { color: var(--ink-2); font-size: 15px; }
+.move .arrow { color: var(--ink-2); }
+.move .b { font-size: 24px; font-weight: 500; }
+.move .b.up { color: var(--hot); }
+.move .b.down { color: var(--ink-2); }
+
+/* Busca e filtros */
+.bar { display: flex; flex-direction: column; gap: 10px; }
+.bar-top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.search { position: relative; flex: 1 1 260px; min-width: 0; }
+.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-2); }
+.search input { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px 11px 38px; box-shadow: var(--shadow); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px; cursor: pointer; font-size: 13px; font-weight: 500; }
+.chip:hover { border-color: var(--primary); }
+.chip[aria-pressed="true"], .chip[aria-expanded="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+.chip .dot { display: inline-block; min-width: 16px; padding: 0 4px; margin-left: 6px; border-radius: 999px; background: var(--hot); color: #fff; font-size: 10px; line-height: 16px; text-align: center; }
+.panel { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 16px; }
+.selects { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
+.f { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.f label { font-size: 12px; color: var(--ink-2); font-weight: 500; }
+.f select, .f input[type=number] { width: 100%; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.link { border: 0; background: transparent; color: var(--primary); cursor: pointer; padding: 6px 4px; font-size: 13px; font-weight: 500; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 5px 14px; border-radius: 999px; cursor: pointer; font-size: 13px; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); }
+.adv-grid { display: grid; gap: 14px 28px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 14px; }
+.adv-top { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
+.adv-top input { width: 84px; }
+.field .r { display: flex; justify-content: space-between; font-size: 13px; }
+.field output { font-family: var(--font-mono); color: var(--ink-2); font-size: 12px; }
+input[type=range] { width: 100%; accent-color: var(--primary); margin: 4px 0 0; }
+.note { font-size: 12px; color: var(--ink-2); margin-top: 12px; max-width: 80ch; }
+
+/* Conteúdo */
+.content { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1000px) { .content { grid-template-columns: minmax(0, 1fr) 340px; } .detail { position: sticky; top: 20px; } .detail .close { display: none; } }
+.queue { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.group-h { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; padding-inline: 4px; }
+.group-h:first-child { margin-top: 0; }
+.group-h h2 { font-size: 13px; font-weight: 700; letter-spacing: 0.01em; }
+.group-h h2.hot { color: var(--hot); }
+.group-h span { font-size: 12px; color: var(--ink-2); }
+.item { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--surface); border: 1px solid transparent; border-radius: 12px; padding: 10px 14px; box-shadow: var(--shadow); cursor: pointer; }
+.item:hover { border-color: var(--line); }
+.item[aria-current="true"] { border-color: var(--primary); }
+.item .rk { font-family: var(--font-mono); font-size: 18px; color: var(--ink-2); text-align: center; }
+.item.hot .rk { color: var(--hot); font-weight: 500; }
+.item .name { font-weight: 600; overflow-wrap: anywhere; }
+.item .meta { font-size: 12px; color: var(--ink-2); margin-top: 1px; display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: center; }
+.badge { font-size: 11px; font-weight: 600; color: var(--primary); background: var(--primary-soft); border-radius: 999px; padding: 1px 8px; }
+.ring { --p: 50; --c: var(--ring-bg); width: 44px; height: 44px; border-radius: 50%; background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--ring-bg) 0); display: grid; place-items: center; flex: none; }
+.ring.hot { --c: var(--hot); }
+.ring.cool { --c: var(--primary); }
+.ring span { width: 34px; height: 34px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-family: var(--font-mono); font-size: 13px; }
+.empty { text-align: center; padding: 36px 16px; color: var(--ink-2); background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); }
+
+/* Detalhe */
+.detail { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); min-width: 0; }
+.detail .pad { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.detail .head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.detail .head .id { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+.detail .head h3 { font-size: 17px; font-weight: 700; }
+.detail .ring { width: 68px; height: 68px; }
+.detail .ring span { width: 54px; height: 54px; font-size: 20px; }
+.why { font-size: 13px; background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.factor { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; font-size: 13px; }
+.factor .v { font-size: 12px; color: var(--ink-2); }
+.factor .pts { font-family: var(--font-mono); font-size: 12px; }
+.factor .track { grid-column: 1 / -1; height: 6px; background: var(--ring-bg); border-radius: 999px; overflow: hidden; }
+.factor .track i { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
+details.more summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--primary); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; margin: 10px 0 0; }
+.kv dt { color: var(--ink-2); }
+.kv dd { margin: 0; text-align: right; font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.detail .close { align-self: flex-end; }
+@media (max-width: 999px) {
+  .detail { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; max-height: 82vh; overflow-y: auto; border-radius: 18px 18px 0 0; transform: translateY(105%); visibility: hidden; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .detail.open { transform: none; visibility: visible; }
+}
+@media (prefers-reduced-motion: no-preference) { .detail { transition: transform .22s ease, visibility .22s; } .factor .track i { transition: width .25s ease; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Priorizador de Demandas</h1>
+      <p class="sub">Manutenção de rede · o que atender primeiro</p>
+    </div>
+    <span class="tag">Protótipo com dados fictícios</span>
+  </header>
+
+  <section class="shift" id="shift" aria-label="O que muda com o priorizador"></section>
+
+  <section class="bar" aria-label="Busca e filtros">
+    <div class="bar-top">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Buscar OS, elemento, local ou chave" aria-label="Buscar">
+      </div>
+      <div class="seg" role="group" aria-label="Ordenação">
+        <button id="mode-prio" type="button" aria-pressed="true">Priorizador</button>
+        <button id="mode-fifo" type="button" aria-pressed="false">Abertura</button>
+      </div>
+    </div>
+    <div class="bar-top">
+      <div class="chips" id="segs" role="group" aria-label="Tipo de OS"></div>
+      <button class="chip" id="btn-filters" type="button" aria-expanded="false" aria-controls="filters">Filtros<span class="dot" id="fcount" hidden>0</span></button>
+      <button class="chip" id="btn-adv" type="button" aria-expanded="false" aria-controls="adv">Ajustes</button>
+      <button class="link" id="clear" type="button" hidden>Limpar</button>
+    </div>
+    <div class="panel" id="filters" hidden>
+      <div class="selects">
+        <div class="f"><label for="f-alim">Alimentador</label><select id="f-alim"></select></div>
+        <div class="f"><label for="f-local">Tipo de local</label><select id="f-local"></select></div>
+        <div class="f"><label for="f-classe">Trecho</label><select id="f-classe"></select></div>
+      </div>
+    </div>
+    <div class="panel" id="adv" hidden>
+      <div class="adv-top">
+        <div class="f"><label for="equipes">Equipes no dia</label><input id="equipes" type="number" min="1" max="12" value="3"></div>
+        <div class="f"><label for="porequipe">OS por equipe</label><input id="porequipe" type="number" min="1" max="6" value="2"></div>
+        <button class="link" id="reset" type="button">Restaurar pesos</button>
+      </div>
+      <div class="adv-grid" id="weights"></div>
+      <p class="note">Pesos ilustrativos para demonstrar o funcionamento. Pesos, fórmula e níveis de prioridade ainda não foram definidos para o projeto. T1/T2/T3 é critério de apoio e não decide sozinho. O impacto em indicadores não entra nesta versão.</p>
+    </div>
+  </section>
+
+  <div class="content">
+    <section class="queue" id="queue" aria-label="Fila de OS"></section>
+    <aside class="detail" id="detail" aria-live="polite"></aside>
+  </div>
+</div>
+
+<script>
+(function () {
+  var DATA = [
+    { id:"OS-24017", dias:21, elem:"Cruzeta trincada", local:"Rural", essencial:null, ci:false, alim:"ALM-04", circ:"C-11", chave:"CH-0312", lat:-21.4012, lon:-42.7120, cli:30, classe:"T3", grav:4, risco:"Médio", nat:"Corretiva", serv:"Emergencial", reinc:0, pf:85 },
+    { id:"OS-24102", dias:6, elem:"Cruzeta trincada", local:"Hospital", essencial:"Hospital", ci:false, alim:"ALM-02", circ:"C-03", chave:"CH-0118", lat:-21.3902, lon:-42.6951, cli:2000, classe:"T2", grav:4, risco:"Médio", nat:"Corretiva", serv:"Emergencial", reinc:1, pf:70 },
+    { id:"OS-24033", dias:18, elem:"Transformador com vazamento", local:"Comércio", essencial:null, ci:true, alim:"ALM-02", circ:"C-05", chave:"CH-0127", lat:-21.3871, lon:-42.6988, cli:420, classe:"T2", grav:3, risco:"Médio", nat:"Corretiva", serv:"Emergencial", reinc:3, pf:78 },
+    { id:"OS-24051", dias:15, elem:"Chave fusível danificada", local:"Residencial", essencial:null, ci:false, alim:"ALM-05", circ:"C-02", chave:"CH-0441", lat:-21.4107, lon:-42.7033, cli:310, classe:"T3", grav:2, risco:"Baixo", nat:"Preventiva", serv:"Programado", reinc:0, pf:35 },
+    { id:"OS-24060", dias:14, elem:"Poste inclinado", local:"Via de grande circulação", essencial:null, ci:false, alim:"ALM-01", circ:"C-07", chave:"CH-0064", lat:-21.3925, lon:-42.7011, cli:650, classe:"T3", grav:4, risco:"Alto", nat:"Corretiva", serv:"Emergencial", reinc:0, pf:60 },
+    { id:"OS-24074", dias:12, elem:"Isolador trincado", local:"Posto de saúde", essencial:"Posto de saúde", ci:false, alim:"ALM-03", circ:"C-04", chave:"CH-0210", lat:-21.3844, lon:-42.7102, cli:880, classe:"T2", grav:3, risco:"Médio", nat:"Corretiva", serv:"Emergencial", reinc:1, pf:55 },
+    { id:"OS-24079", dias:11, elem:"Cruzeta trincada", local:"Indústria", essencial:null, ci:true, alim:"ALM-06", circ:"C-01", chave:"CH-0509", lat:-21.4189, lon:-42.6874, cli:1200, classe:"T1", grav:3, risco:"Baixo", nat:"Corretiva", serv:"Emergencial", reinc:0, pf:62 },
+    { id:"OS-24085", dias:9, elem:"Condutor com fadiga", local:"Residencial", essencial:null, ci:false, alim:"ALM-05", circ:"C-06", chave:"CH-0448", lat:-21.4066, lon:-42.7080, cli:95, classe:"T3", grav:2, risco:"Baixo", nat:"Preventiva", serv:"Programado", reinc:0, pf:30 },
+    { id:"OS-24090", dias:8, elem:"Transformador sobrecarregado", local:"Centro de maternidade", essencial:"Centro de maternidade", ci:false, alim:"ALM-03", circ:"C-02", chave:"CH-0205", lat:-21.3830, lon:-42.7055, cli:540, classe:"T2", grav:3, risco:"Médio", nat:"Corretiva", serv:"Emergencial", reinc:2, pf:66 },
+    { id:"OS-24096", dias:7, elem:"Chave seccionadora com defeito", local:"Residencial urbano", essencial:null, ci:false, alim:"ALM-01", circ:"C-01", chave:"CH-0051", lat:-21.3950, lon:-42.6990, cli:3100, classe:"T1", grav:4, risco:"Médio", nat:"Corretiva", serv:"Emergencial", reinc:2, pf:72 },
+    { id:"OS-24108", dias:5, elem:"Cruzeta trincada", local:"Rural", essencial:null, ci:false, alim:"ALM-04", circ:"C-09", chave:"CH-0330", lat:-21.4150, lon:-42.7200, cli:45, classe:"T3", grav:3, risco:"Baixo", nat:"Preventiva", serv:"Programado", reinc:0, pf:40 },
+    { id:"OS-24111", dias:4, elem:"Vegetação sobre a rede", local:"Residencial", essencial:null, ci:false, alim:"ALM-05", circ:"C-04", chave:"CH-0452", lat:-21.4092, lon:-42.6999, cli:180, classe:"T3", grav:2, risco:"Médio", nat:"Preventiva", serv:"Programado", reinc:0, pf:25 },
+    { id:"OS-24115", dias:3, elem:"Ferragem corroída", local:"Comércio", essencial:null, ci:true, alim:"ALM-02", circ:"C-08", chave:"CH-0133", lat:-21.3890, lon:-42.6930, cli:260, classe:"T3", grav:2, risco:"Baixo", nat:"Preventiva", serv:"Programado", reinc:1, pf:38 },
+    { id:"OS-24120", dias:1, elem:"Fusível com rearmes sucessivos", local:"Residencial", essencial:null, ci:false, alim:"ALM-03", circ:"C-06", chave:"CH-0219", lat:-21.3860, lon:-42.7070, cli:150, classe:"T3", grav:3, risco:"Médio", nat:"Corretiva", serv:"Emergencial", reinc:4, pf:74 }
+  ];
+
+  var FACTORS = [
+    { key:"pf",   label:"Probabilidade de falha", w:8, c:function(o){ return o.pf/100; }, v:function(o){ return o.pf + "%"; } },
+    { key:"cli",  label:"Clientes afetados", w:9, c:function(o){ return Math.min(1, Math.log10(o.cli+1)/Math.log10(2501)); }, v:function(o){ return o.cli.toLocaleString("pt-BR"); } },
+    { key:"ess",  label:"Clientes essenciais e tipo de local", w:9, c:function(o){ return o.essencial ? 1 : (o.ci ? 0.5 : 0); }, v:function(o){ return o.essencial || (o.ci ? o.local : "Sem cliente essencial"); } },
+    { key:"cls",  label:"Classificação do trecho (T1/T2/T3)", w:4, c:function(o){ return {T1:1,T2:0.6,T3:0.3}[o.classe]; }, v:function(o){ return o.classe; } },
+    { key:"grav", label:"Gravidade da anomalia", w:6, c:function(o){ return o.grav/5; }, v:function(o){ return o.grav + " de 5"; } },
+    { key:"risk", label:"Risco de acidente", w:7, c:function(o){ return {"Alto":1,"Médio":0.5,"Baixo":0}[o.risco]; }, v:function(o){ return o.risco; } },
+    { key:"nat",  label:"Natureza da manutenção", w:3, c:function(o){ return o.nat==="Corretiva" ? 1 : 0.4; }, v:function(o){ return o.nat; } },
+    { key:"reinc",label:"Reincidência do ativo", w:4, c:function(o){ return Math.min(1, o.reinc/4); }, v:function(o){ return o.reinc + (o.reinc===1 ? " ocorrência anterior" : " ocorrências anteriores"); } },
+    { key:"serv", label:"Tipo de serviço", w:3, c:function(o){ return o.serv==="Emergencial" ? 1 : 0.3; }, v:function(o){ return o.serv; } }
+  ];
+  
+  var DEFAULTS = FACTORS.map(function(f){ return f.w; });
+  var ALL = "Todos";
+  var SEGS = [["all","Todas"],["ess","Clientes essenciais"],["emerg","Emergenciais"],["prog","Programadas"]];
+  var state = { mode:"prio", sel:"OS-24102", weights:DEFAULTS.slice(), equipes:3, porequipe:2, q:"", seg:"all",
+                alim:ALL, local:ALL, classe:ALL, sheet:false, rede:false, todos:false };
+
+  function $(id){ return document.getElementById(id); }
+  function el(tag, cls, txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+  function norm(s){ return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); }
+  function isWide(){ return window.matchMedia("(min-width: 1000px)").matches; }
+
+  function score(o){
+    var sw = state.weights.reduce(function(a,b){return a+b;},0) || 1;
+    var parts = FACTORS.map(function(f,i){ var c=f.c(o); return { f:f, c:c, pts: state.weights[i]*c/sw*100 }; });
+    return { total: parts.reduce(function(a,p){return a+p.pts;},0), parts: parts };
+  }
+  function computed(){
+    var base = DATA.map(function(o){ return { o:o, s:score(o) }; });
+    var fifo = base.slice().sort(function(a,b){ return b.o.dias - a.o.dias; });
+    var prio = base.slice().sort(function(a,b){ return b.s.total - a.s.total; });
+    var fifoPos = {}, prioPos = {};
+    fifo.forEach(function(r,i){ fifoPos[r.o.id]=i+1; });
+    prio.forEach(function(r,i){ prioPos[r.o.id]=i+1; });
+    return { fifo:fifo, prio:prio, fifoPos:fifoPos, prioPos:prioPos };
+  }
+  function capacity(){ return Math.max(0, state.equipes * state.porequipe); }
+
+  function matches(o){
+    if (state.seg==="ess" && !o.essencial) return false;
+    if (state.seg==="emerg" && o.serv!=="Emergencial") return false;
+    if (state.seg==="prog" && o.serv!=="Programado") return false;
+    if (state.alim!==ALL && o.alim!==state.alim) return false;
+    if (state.local!==ALL && o.local!==state.local) return false;
+    if (state.classe!==ALL && o.classe!==state.classe) return false;
+    if (state.q.trim()) {
+      var hay = norm([o.id,o.elem,o.local,o.alim,o.circ,o.chave].join(" "));
+      if (hay.indexOf(norm(state.q.trim()))===-1) return false;
+    }
+    return true;
+  }
+  function filtersActive(){ return (state.alim!==ALL)+(state.local!==ALL)+(state.classe!==ALL); }
+
+  function uniq(key){ return DATA.map(function(o){return o[key];}).filter(function(v,i,a){return a.indexOf(v)===i;}).sort(); }
+  function fillSelect(id, values, key){
+    var s=$(id); s.textContent="";
+    [ALL].concat(values).forEach(function(v){ var o=document.createElement("option"); o.value=v; o.textContent=v; s.appendChild(o); });
+    s.addEventListener("change", function(){ state[key]=s.value; render(); });
+  }
+
+  function renderSegs(){
+    var box=$("segs"); box.textContent="";
+    SEGS.forEach(function(s){
+      var b=el("button","chip",s[1]); b.type="button"; b.setAttribute("aria-pressed", state.seg===s[0]);
+      b.addEventListener("click", function(){ state.seg=s[0]; render(); });
+      box.appendChild(b);
+    });
+  }
+
+  function renderWeights(){
+    var box=$("weights"); box.textContent="";
+    FACTORS.forEach(function(f,i){
+      var wrap=el("div","field"), r=el("div","r");
+      var lab=el("label",null,f.label); lab.htmlFor="w-"+f.key;
+      var out=el("output",null,String(state.weights[i]));
+      r.appendChild(lab); r.appendChild(out);
+      var inp=document.createElement("input"); inp.type="range"; inp.min="0"; inp.max="10"; inp.step="1"; inp.id="w-"+f.key; inp.value=state.weights[i];
+      inp.addEventListener("input", function(){ state.weights[i]=+inp.value; out.textContent=inp.value; render(); });
+      wrap.appendChild(r); wrap.appendChild(inp); box.appendChild(wrap);
+    });
+  }
+
+  function select(id){ state.sel=id; state.todos=false; state.rede=false; state.sheet=true; render(); }
+
+  function renderShift(c){
+    var g=$("shift"); g.textContent="";
+    [["OS-24017","30 clientes sem luz","Cruzeta trincada · rural"],["OS-24102","Hospital e 2.000 clientes","Cruzeta trincada · hospital"]].forEach(function(p){
+      var b=el("button","shift-card"); b.type="button";
+      var l=el("div"); l.appendChild(el("div","t1",p[1])); l.appendChild(el("div","t2",p[2])); b.appendChild(l);
+      var a=c.fifoPos[p[0]], z=c.prioPos[p[0]];
+      var m=el("div","move"); m.title="Posição na ordem de abertura → posição no priorizador";
+      m.appendChild(el("span","a","#"+a)); m.appendChild(el("span","arrow","→")); m.appendChild(el("span","b "+(z<a?"up":"down"),"#"+z));
+      b.appendChild(m);
+      b.addEventListener("click", function(){ state.q=""; state.seg="all"; state.alim=state.local=state.classe=ALL; syncControls(); select(p[0]); });
+      g.appendChild(b);
+    });
+  }
+
+  function ringEl(total, cls){
+    var r=el("div","ring "+cls); r.style.setProperty("--p", Math.round(total)); r.appendChild(el("span",null,total.toFixed(0))); return r;
+  }
+
+  function renderQueue(c){
+    var list = state.mode==="prio" ? c.prio : c.fifo, cap=capacity();
+    var box=$("queue"); box.textContent="";
+    var groups=[{ hot:true, name:"Atendem hoje", rows:[] },{ hot:false, name:"Aguardam", rows:[] }];
+    var total=[0,0];
+    list.forEach(function(r,i){ var gi = i<cap ? 0 : 1; total[gi]++; if(matches(r.o)) groups[gi].rows.push({ r:r, i:i }); });
+    var any=false;
+    groups.forEach(function(gr,gi){
+      if(!gr.rows.length) return; any=true;
+      var h=el("div","group-h"); h.appendChild(el("h2", gr.hot?"hot":"", gr.name));
+      h.appendChild(el("span",null, gr.rows.length===total[gi] ? total[gi]+" OS" : gr.rows.length+" de "+total[gi]));
+      box.appendChild(h);
+      gr.rows.forEach(function(x){
+        var o=x.r.o, it=el("button","item"+(gr.hot?" hot":"")); it.type="button";
+        if(o.id===state.sel) it.setAttribute("aria-current","true");
+        it.appendChild(el("span","rk",String(x.i+1)));
+        var mid=el("div"); mid.appendChild(el("div","name",o.elem));
+        var meta=el("div","meta"); meta.appendChild(el("span",null,o.local));
+        if(o.essencial) meta.appendChild(el("span","badge","essencial"));
+        meta.appendChild(el("span",null,o.cli.toLocaleString("pt-BR")+" clientes"));
+        mid.appendChild(meta); it.appendChild(mid);
+        it.appendChild(ringEl(x.r.s.total, gr.hot?"hot":"cool"));
+        it.addEventListener("click", function(){ select(o.id); });
+        box.appendChild(it);
+      });
+    });
+    if(!any) box.appendChild(el("div","empty","Nenhuma OS corresponde aos filtros."));
+  }
+
+  function renderDetail(c){
+    var box=$("detail"); box.textContent=""; box.classList.toggle("open", state.sheet && !isWide());
+    var r=c.prio.filter(function(x){return x.o.id===state.sel;})[0];
+    if(!r){ box.appendChild(el("div","empty","Selecione uma OS na fila.")); return; }
+    var o=r.o, cap=capacity(), pos = (state.mode==="prio" ? c.prioPos : c.fifoPos)[o.id];
+    var pad=el("div","pad");
+    var cl=el("button","link close","Fechar"); cl.type="button"; cl.addEventListener("click", function(){ state.sheet=false; render(); }); pad.appendChild(cl);
+    var head=el("div","head"), t=el("div");
+    t.appendChild(el("div","id",o.id)); t.appendChild(el("h3",null,o.elem)); t.appendChild(el("div","muted",o.local+" · "+o.cli.toLocaleString("pt-BR")+" clientes"));
+    head.appendChild(t); head.appendChild(ringEl(r.s.total, pos<=cap?"hot":"cool")); pad.appendChild(head);
+
+    var sorted=r.s.parts.slice().sort(function(a,b){return b.pts-a.pts;});
+    var top=sorted.filter(function(p){return p.pts>0;}).slice(0,3);
+    pad.appendChild(el("div","why","Posição #"+c.prioPos[o.id]+" no priorizador, contra #"+c.fifoPos[o.id]+" na ordem de abertura. Pesaram mais: "+
+      top.map(function(p){ return p.f.label.toLowerCase(); }).join(", ")+"."));
+
+    var maxPts=sorted[0].pts||1;
+    sorted.slice(0,3).forEach(function(p){ pad.appendChild(factorEl(p,o,maxPts)); });
+
+    var d1=document.createElement("details"); d1.className="more"; d1.open=state.todos;
+    d1.appendChild(el("summary",null,"Todos os critérios"));
+    var wrap=el("div"); wrap.style.cssText="display:flex;flex-direction:column;gap:12px;margin-top:12px";
+    sorted.slice(3).forEach(function(p){ wrap.appendChild(factorEl(p,o,maxPts)); });
+    d1.appendChild(wrap); d1.addEventListener("toggle", function(){ state.todos=d1.open; }); pad.appendChild(d1);
+
+    var d2=document.createElement("details"); d2.className="more"; d2.open=state.rede;
+    d2.appendChild(el("summary",null,"Rede e localização"));
+    var kv=el("dl","kv");
+    [["Alimentador / circuito",o.alim+" / "+o.circ],["Chave",o.chave],["Coordenadas",o.lat.toFixed(4)+", "+o.lon.toFixed(4)],["Trecho",o.classe],["Serviço",o.serv+" · "+o.nat]].forEach(function(p){
+      kv.appendChild(el("dt",null,p[0])); kv.appendChild(el("dd",null,p[1]));
+    });
+    d2.appendChild(kv); d2.addEventListener("toggle", function(){ state.rede=d2.open; }); pad.appendChild(d2);
+    box.appendChild(pad);
+  }
+  function factorEl(p,o,maxPts){
+    var f=el("div","factor"), left=el("div");
+    left.appendChild(document.createTextNode(p.f.label)); left.appendChild(el("div","v",p.f.v(o)));
+    f.appendChild(left); f.appendChild(el("div","pts","+"+p.pts.toFixed(1)));
+    var tr=el("div","track"), i=document.createElement("i"); i.style.width=(p.pts/maxPts*100)+"%"; tr.appendChild(i); f.appendChild(tr);
+    return f;
+  }
+
+  function syncControls(){
+    $("q").value=state.q; $("f-alim").value=state.alim; $("f-local").value=state.local; $("f-classe").value=state.classe;
+  }
+  function render(){
+    var c=computed();
+    $("mode-prio").setAttribute("aria-pressed", state.mode==="prio");
+    $("mode-fifo").setAttribute("aria-pressed", state.mode==="fifo");
+    var fa=filtersActive(), fc=$("fcount"); fc.hidden=!fa; fc.textContent=fa;
+    $("clear").hidden = !(fa || state.seg!=="all" || state.q);
+    renderSegs(); renderShift(c); renderQueue(c); renderDetail(c);
+  }
+  function toggle(btn, panel){
+    var open = btn.getAttribute("aria-expanded")!=="true";
+    btn.setAttribute("aria-expanded", open); panel.hidden=!open;
+  }
+
+  fillSelect("f-alim", uniq("alim"), "alim");
+  fillSelect("f-local", uniq("local"), "local");
+  fillSelect("f-classe", uniq("classe"), "classe");
+  $("q").addEventListener("input", function(e){ state.q=e.target.value; render(); });
+  $("btn-filters").addEventListener("click", function(){ toggle($("btn-filters"), $("filters")); });
+  $("btn-adv").addEventListener("click", function(){ toggle($("btn-adv"), $("adv")); });
+  $("clear").addEventListener("click", function(){ state.q=""; state.seg="all"; state.alim=state.local=state.classe=ALL; syncControls(); render(); });
+  $("mode-prio").addEventListener("click", function(){ state.mode="prio"; render(); });
+  $("mode-fifo").addEventListener("click", function(){ state.mode="fifo"; render(); });
+  $("equipes").addEventListener("input", function(e){ state.equipes=Math.max(1, +e.target.value||1); render(); });
+  $("porequipe").addEventListener("input", function(e){ state.porequipe=Math.max(1, +e.target.value||1); render(); });
+  $("reset").addEventListener("click", function(){ state.weights=DEFAULTS.slice(); renderWeights(); render(); });
+  window.addEventListener("resize", function(){ renderDetail(computed()); });
+
+  renderWeights(); render();
+})();
+</script>
+
+</body></html>
