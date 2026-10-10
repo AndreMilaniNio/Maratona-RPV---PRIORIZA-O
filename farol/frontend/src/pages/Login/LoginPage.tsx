@@ -53,7 +53,7 @@ export function LoginPage() {
             <Input type="password" autoComplete="current-password" {...form.register('senha')} />
           </FormField>
           {credenciaisInvalidas ? (
-            <InlineAlert tone="danger">Credenciais inválidas.</InlineAlert>
+            <InlineAlert tone="danger">{erro.message}</InlineAlert>
           ) : erro ? (
             <ErrorState error={erro} compact />
           ) : null}

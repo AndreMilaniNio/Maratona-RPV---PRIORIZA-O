@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Outlet } from 'react-router';
+import { Outlet, useNavigate } from 'react-router';
 import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, Radio, UserRound } from 'lucide-react';
 import { Sidebar } from '@/app/layouts/Sidebar';
 import { CitySelector } from '@/app/layouts/CitySelector';
@@ -10,6 +10,7 @@ import { CidadeProvider, useCidade } from '@/features/autenticacao/hooks/CidadeP
 import { useOperacaoRealtime } from '@/services/realtime/useOperacaoRealtime';
 import type { EstadoTempoReal } from '@/services/realtime/operacaoHub';
 import { cn } from '@/lib/utils';
+import { ROTAS } from '@/app/config/navigation';
 
 const PERFIL_LABEL: Record<string, string> = {
   Administrador: 'Administrador',
@@ -30,6 +31,7 @@ export function AppLayout() {
 
 function Shell() {
   const { usuario, logout } = useAuth();
+  const navigate = useNavigate();
   const { municipioId } = useCidade();
   const tempoReal = useOperacaoRealtime(!!usuario, municipioId);
   const [recolhida, setRecolhida] = React.useState(false);
@@ -75,7 +77,15 @@ function Shell() {
             </span>
             <span className="text-xs text-[#9fb4cf]">({(usuario?.perfis ?? []).map((p) => PERFIL_LABEL[p] ?? p).join(', ')})</span>
           </div>
-          <Button variant="ghost" size="sm" className="text-white hover:bg-navy-soft" onClick={() => logout()}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-navy-soft"
+            onClick={() => {
+              logout();
+              navigate(ROTAS.login, { replace: true });
+            }}
+          >
             <LogOut /> Sair
           </Button>
         </div>

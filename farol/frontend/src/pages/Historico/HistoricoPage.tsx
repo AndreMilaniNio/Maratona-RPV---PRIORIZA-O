@@ -1,5 +1,6 @@
-import { PageHeader } from '@/components/layout/PageHeader';
-
-export default function HistoricoPage() {
-  return <PageHeader title="Histórico de operações" description="Em construção." />;
-}
+import { useQuery } from '@tanstack/react-query';
+import { PageHeader, Section } from '@/components/layout/PageHeader';
+import { LoadingState, ErrorState, EmptyState } from '@/components/feedback/states';
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { api } from '@/services/api/client'; import type { AuditoriaDtoPaginaDto } from '@/types/api';
+export default function HistoricoPage() { const historico = useQuery({ queryKey: ['auditoria'], queryFn: () => api.get<AuditoriaDtoPaginaDto>('/api/admin/auditoria', { pagina: 1, tamanhoPagina: 100 }) }); return <div className="space-y-3"><PageHeader title="Histórico de operações" description="Trilha de auditoria registrada no servidor." /><Section title="Eventos recentes">{historico.isLoading ? <LoadingState /> : historico.error ? <ErrorState error={historico.error} onRetry={() => void historico.refetch()} /> : !historico.data?.itens.length ? <EmptyState title="Nenhum evento encontrado" /> : <Table><THead><TR><TH>Data</TH><TH>Usuário</TH><TH>Ação</TH><TH>Entidade</TH><TH>Justificativa</TH></TR></THead><TBody>{historico.data.itens.map((a) => <TR key={a.id}><TD>{new Date(a.ocorridoEm).toLocaleString('pt-BR')}</TD><TD>{a.usuario ?? 'Sistema'}</TD><TD>{a.acao}</TD><TD>{a.entidade} {a.entidadeId ? `#${a.entidadeId}` : ''}</TD><TD>{a.justificativa ?? '—'}</TD></TR>)}</TBody></Table>}</Section></div>; }

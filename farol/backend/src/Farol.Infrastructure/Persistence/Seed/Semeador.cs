@@ -46,6 +46,13 @@ public class Semeador(
             var demo = ActivatorUtilities.CreateInstance<SemeadorDemonstrativo>(servicos);
             await demo.ExecutarAsync(ct);
         }
+        else if (opcoes.Value.Demo.Habilitado)
+        {
+            // Mantém a credencial do administrador demo alinhada à configuração
+            // mesmo quando a base demonstrativa já existe.
+            var demo = ActivatorUtilities.CreateInstance<SemeadorDemonstrativo>(servicos);
+            await demo.GarantirSenhaAdministradorAsync(ct);
+        }
     }
 
     private async Task SemearReferenciaAsync(CancellationToken ct)

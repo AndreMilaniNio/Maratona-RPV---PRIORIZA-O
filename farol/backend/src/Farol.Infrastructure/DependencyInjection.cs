@@ -37,7 +37,8 @@ public static class DependencyInjection
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<FarolDbContext>()
-            .AddSignInManager();
+            .AddSignInManager()
+            .AddDefaultTokenProviders();
 
         services.AddHttpContextAccessor();
         services.AddScoped<UsuarioAtual>();

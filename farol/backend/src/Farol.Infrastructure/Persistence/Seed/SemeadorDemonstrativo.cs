@@ -248,6 +248,32 @@ public class SemeadorDemonstrativo(
         return resultado;
     }
 
+    /// <summary>
+    /// Atualiza somente a conta administrativa demonstrativa em bancos já
+    /// existentes, sem apagar dados para alterar a credencial de apresentação.
+    /// </summary>
+    public async Task GarantirSenhaAdministradorAsync(CancellationToken ct)
+    {
+        var senha = opcoes.Value.Demo.SenhaUsuarios;
+        if (string.IsNullOrWhiteSpace(senha)) return;
+
+        var admin = await usuarios.FindByEmailAsync("admin@farol.demo");
+        if (admin is null || !admin.Demonstrativo) return;
+
+        var desbloqueio = await usuarios.SetLockoutEndDateAsync(admin, null);
+        var falhas = await usuarios.ResetAccessFailedCountAsync(admin);
+        if (!desbloqueio.Succeeded || !falhas.Succeeded)
+        {
+            var erros = desbloqueio.Errors.Concat(falhas.Errors).Select(e => e.Description);
+            logger.LogWarning("Bloqueio do administrador demonstrativo não foi removido: {Erros}", string.Join("; ", erros));
+        }
+
+        var token = await usuarios.GeneratePasswordResetTokenAsync(admin);
+        var resultado = await usuarios.ResetPasswordAsync(admin, token, senha);
+        if (!resultado.Succeeded)
+            logger.LogWarning("Senha do administrador demonstrativo não foi atualizada: {Erros}", string.Join("; ", resultado.Errors.Select(e => e.Description)));
+    }
+
     /// <summary>Cenários da seção 21, criados pelos mesmos serviços da produção.</summary>
     private async Task SemearOrdensAsync(Dictionary<CidadeDemo, Municipio> m, Dictionary<string, Usuario> u, Dictionary<string, Equipe> equipes, CancellationToken ct)
     {

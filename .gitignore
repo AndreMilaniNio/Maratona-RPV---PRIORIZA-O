@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+farol/backend/src/Farol.API/appsettings.Development.json
+farol/.postgres-demo/
 !.env.sample
 !.env.template
 .secrets/

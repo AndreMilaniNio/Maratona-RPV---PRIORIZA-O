@@ -4,13 +4,14 @@ import { ShieldOff } from 'lucide-react';
 import { useAuth } from '@/features/autenticacao/hooks/AuthProvider';
 import { LoadingState, EmptyState } from '@/components/feedback/states';
 import type { RequisitoPermissao } from '@/lib/permissions';
+import { ROTAS } from '@/app/config/navigation';
 
 /** Exige sessão; sem sessão, vai ao Login guardando a rota de origem. */
 export function RequireAuth() {
   const { estado } = useAuth();
   const location = useLocation();
+  if (estado === 'anonimo') return <Navigate to={ROTAS.login} replace state={{ de: location.pathname }} />;
   if (estado === 'verificando') return <LoadingState label="Verificando sessão…" className="justify-center py-20" />;
-  if (estado === 'anonimo') return <Navigate to="/login" replace state={{ de: location.pathname + location.search }} />;
   return <Outlet />;
 }
 

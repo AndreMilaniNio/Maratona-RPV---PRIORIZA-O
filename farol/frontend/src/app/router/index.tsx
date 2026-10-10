@@ -20,6 +20,7 @@ const RegrasPrioridadePage = React.lazy(() => import('@/pages/Configuracoes/Regr
 const CodigosPrazosPage = React.lazy(() => import('@/pages/Configuracoes/CodigosPrazosPage'));
 const CadastrosPage = React.lazy(() => import('@/pages/Configuracoes/CadastrosPage'));
 const UsuariosPage = React.lazy(() => import('@/pages/Configuracoes/UsuariosPage'));
+const SuportePage = React.lazy(() => import('@/pages/Suporte/SuportePage'));
 
 function requisitoDe(to: string): RequisitoPermissao | undefined {
   for (const g of NAVEGACAO) for (const i of g.itens) if (i.to === to) return i.requisito;
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
           { path: ROTAS.prioridades, element: pagina(<CodigosPrazosPage />, requisitoDe(ROTAS.prioridades)) },
           { path: ROTAS.cadastros, element: pagina(<CadastrosPage />, requisitoDe(ROTAS.cadastros)) },
           { path: ROTAS.usuarios, element: pagina(<UsuariosPage />, requisitoDe(ROTAS.usuarios)) },
+          { path: ROTAS.suporte, element: pagina(<SuportePage />, requisitoDe(ROTAS.suporte)) },
           { path: '*', element: <NaoEncontrada /> },
         ],
       },
