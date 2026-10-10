@@ -1,6 +1,9 @@
 /** Configuração de ambiente do frontend. */
 export const API_URL: string = (import.meta.env.VITE_API_URL ?? 'http://localhost:5080').replace(/\/+$/, '');
 
+/** Demonstração local sem tela de login; a API precisa habilitar a mesma opção. */
+export const MODO_OPERADOR_UNICO = import.meta.env.VITE_MODO_OPERADOR_UNICO === 'true';
+
 /** Fuso horário operacional usado para exibir datas (a API trabalha em UTC). */
 export const FUSO_OPERACIONAL = 'America/Sao_Paulo';
 

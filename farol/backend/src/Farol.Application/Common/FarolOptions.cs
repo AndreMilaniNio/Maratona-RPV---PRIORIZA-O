@@ -14,6 +14,8 @@ public class FarolOptions
     public DuplicidadeOptions Duplicidade { get; set; } = new();
     public PontuacaoOptions Pontuacao { get; set; } = new();
     public DemoOptions Demo { get; set; } = new();
+    /// <summary>Habilita a entrada demonstrativa sem tela de login. Nunca usar fora da base demo.</summary>
+    public bool ModoOperadorUnico { get; set; }
     public ReclassificacaoOptions Reclassificacao { get; set; } = new();
     public RotulosOptions Rotulos { get; set; } = new();
 

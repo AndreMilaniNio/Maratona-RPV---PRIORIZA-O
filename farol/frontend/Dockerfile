@@ -8,6 +8,8 @@ COPY . .
 # URL da API embutida no bundle no momento do build
 ARG VITE_API_URL=http://localhost:5080
 ENV VITE_API_URL=${VITE_API_URL}
+ARG VITE_MODO_OPERADOR_UNICO=false
+ENV VITE_MODO_OPERADOR_UNICO=${VITE_MODO_OPERADOR_UNICO}
 RUN npm run build
 
 # --- Etapa 2: servir com nginx ---

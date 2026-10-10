@@ -31,6 +31,7 @@ services:
       FAROL_ADMIN_SENHA: ${FAROL_ADMIN_SENHA:-}
       Farol__Demo__Habilitado: ${FAROL_DEMO:-true}
       Farol__Demo__SenhaUsuarios: ${FAROL_DEMO_SENHA:-}
+      Farol__ModoOperadorUnico: ${FAROL_MODO_OPERADOR_UNICO:-true}
       Farol__Cors__Origens__0: http://localhost:5173
       Farol__Roteamento__UrlBase: ${FAROL_ROTEAMENTO_URL:-}
       Farol__Cep__Provedor: ${FAROL_CEP_PROVEDOR:-Demonstrativo}
@@ -43,6 +44,7 @@ services:
       context: frontend
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:5080}
+        VITE_MODO_OPERADOR_UNICO: ${FAROL_MODO_OPERADOR_UNICO:-true}
     depends_on:
       - api
     ports:

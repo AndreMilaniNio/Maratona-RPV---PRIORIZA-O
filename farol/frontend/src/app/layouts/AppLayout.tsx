@@ -10,6 +10,7 @@ import { CidadeProvider, useCidade } from '@/features/autenticacao/hooks/CidadeP
 import { useOperacaoRealtime } from '@/services/realtime/useOperacaoRealtime';
 import type { EstadoTempoReal } from '@/services/realtime/operacaoHub';
 import { cn } from '@/lib/utils';
+import { MODO_OPERADOR_UNICO } from '@/app/config/env';
 
 const PERFIL_LABEL: Record<string, string> = {
   Administrador: 'Administrador',
@@ -75,9 +76,11 @@ function Shell() {
             </span>
             <span className="text-xs text-[#9fb4cf]">({(usuario?.perfis ?? []).map((p) => PERFIL_LABEL[p] ?? p).join(', ')})</span>
           </div>
-          <Button variant="ghost" size="sm" className="text-white hover:bg-navy-soft" onClick={() => logout()}>
-            <LogOut /> Sair
-          </Button>
+          {!MODO_OPERADOR_UNICO && (
+            <Button variant="ghost" size="sm" className="text-white hover:bg-navy-soft" onClick={() => logout()}>
+              <LogOut /> Sair
+            </Button>
+          )}
         </div>
       </header>
       <div className="flex min-h-0 flex-1">

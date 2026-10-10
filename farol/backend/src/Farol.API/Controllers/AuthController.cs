@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Farol.API.Controllers;
 
@@ -19,7 +20,8 @@ public record PreferenciasRequest(int? MunicipioPreferidoId);
 [ApiController]
 [Route("api/auth")]
 public class AuthController(
-    UserManager<Usuario> usuarios, SignInManager<Usuario> acesso, TokenService tokens, IAppDbContext db, Auditor auditor) : ControllerBase
+    UserManager<Usuario> usuarios, SignInManager<Usuario> acesso, TokenService tokens, IAppDbContext db, Auditor auditor,
+    IOptions<FarolOptions> opcoes) : ControllerBase
 {
     /// <summary>Autentica e devolve o JWT. Mensagem única para usuário ou senha inválidos.</summary>
     [HttpPost("login")]
@@ -38,6 +40,24 @@ public class AuthController(
             await auditor.RegistrarAgoraAsync(AcoesAuditoria.LoginRecusado, "Usuario", usuario.Id, ct: ct);
             return Problem(statusCode: 401, title: resultado.IsLockedOut ? "Acesso bloqueado temporariamente por tentativas inválidas." : "Credenciais inválidas.");
         }
+
+        var perfis = await usuarios.GetRolesAsync(usuario);
+        var (token, expira) = tokens.Gerar(usuario, perfis);
+        return new LoginResponse(token, expira, await SessaoAsync(usuario, perfis.ToList(), ct));
+    }
+
+    /// <summary>Entrada sem credenciais exclusiva para a demonstração local.</summary>
+    [HttpPost("operador-unico")]
+    [AllowAnonymous]
+    public async Task<ActionResult<LoginResponse>> OperadorUnico(CancellationToken ct)
+    {
+        var configuracao = opcoes.Value;
+        if (!configuracao.ModoOperadorUnico || !configuracao.Demo.Habilitado)
+            return NotFound();
+
+        var usuario = await usuarios.FindByEmailAsync("admin@farol.demo");
+        if (usuario is null || !usuario.Ativo)
+            return Problem(statusCode: 503, title: "O operador demonstrativo ainda não está disponível.");
 
         var perfis = await usuarios.GetRolesAsync(usuario);
         var (token, expira) = tokens.Gerar(usuario, perfis);

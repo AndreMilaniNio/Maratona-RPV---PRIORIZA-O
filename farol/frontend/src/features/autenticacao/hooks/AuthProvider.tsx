@@ -4,6 +4,7 @@ import { setUnauthorizedHandler, tokenStorage } from '@/services/api/client';
 import { authService } from '@/features/autenticacao/services/authService';
 import { atende, type RequisitoPermissao } from '@/lib/permissions';
 import type { UsuarioSessaoDto } from '@/types/api';
+import { MODO_OPERADOR_UNICO } from '@/app/config/env';
 
 type EstadoSessao = 'verificando' | 'autenticado' | 'anonimo';
 
@@ -24,7 +25,7 @@ export const AuthContext = React.createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [usuario, setUsuario] = React.useState<UsuarioSessaoDto | null>(null);
-  const [estado, setEstado] = React.useState<EstadoSessao>(() => (tokenStorage.get() ? 'verificando' : 'anonimo'));
+  const [estado, setEstado] = React.useState<EstadoSessao>(() => (MODO_OPERADOR_UNICO || tokenStorage.get() ? 'verificando' : 'anonimo'));
   const [motivoSaida, setMotivoSaida] = React.useState<string | null>(null);
 
   const logout = React.useCallback(
@@ -47,8 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (estado !== 'verificando') return;
     let ativo = true;
-    authService
-      .me()
+    const sessao = MODO_OPERADOR_UNICO
+      ? authService.operadorUnico().then((r) => {
+          if (!r.token || !r.usuario) throw new Error('Resposta inválida do operador único.');
+          tokenStorage.set(r.token);
+          return r.usuario;
+        })
+      : authService.me();
+    sessao
       .then((u) => {
         if (!ativo) return;
         setUsuario(u);
