@@ -1,0 +1,21 @@
+# Dependências e artefatos gerados
+farol/frontend/node_modules/
+farol/frontend/dist/
+farol/backend/**/bin/
+farol/backend/**/obj/
+
+# Configuração local e arquivos de ferramentas
+.env
+.env.*
+!.env.example
+.vs/
+.idea/
+.agents/
+.claude/
+.cursor/
+.windsurf/
+
+# Logs e arquivos temporários
+*.log
+*.user
+*.suo

@@ -1,0 +1,52 @@
+# Ambiente de desenvolvimento do Farol: PostgreSQL + API + frontend.
+# Copie .env.example para .env e ajuste os valores antes de subir.
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-farol}
+      POSTGRES_USER: ${POSTGRES_USER:-farol}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    ports:
+      - "5432:5432"
+    volumes:
+      - farol-pg:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-farol} -d ${POSTGRES_DB:-farol}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Farol: Host=postgres;Port=5432;Database=${POSTGRES_DB:-farol};Username=${POSTGRES_USER:-farol};Password=${POSTGRES_PASSWORD}
+      Jwt__Chave: ${JWT_CHAVE:?defina JWT_CHAVE no .env}
+      FAROL_ADMIN_EMAIL: ${FAROL_ADMIN_EMAIL:-}
+      FAROL_ADMIN_SENHA: ${FAROL_ADMIN_SENHA:-}
+      Farol__Demo__Habilitado: ${FAROL_DEMO:-true}
+      Farol__Demo__SenhaUsuarios: ${FAROL_DEMO_SENHA:-}
+      Farol__Cors__Origens__0: http://localhost:5173
+      Farol__Roteamento__UrlBase: ${FAROL_ROTEAMENTO_URL:-}
+      Farol__Cep__Provedor: ${FAROL_CEP_PROVEDOR:-Demonstrativo}
+      Farol__Cep__UrlModelo: ${FAROL_CEP_URL:-}
+    ports:
+      - "5080:8080"
+
+  frontend:
+    build:
+      context: frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5080}
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
+
+volumes:
+  farol-pg:
