@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+@theme {
+  --color-primary: #2457a6;
+  --color-primary-hover: #1d4888;
+  --color-primary-soft: #e8eef8;
+  --color-navy: #17365d;
+  --color-navy-soft: #24486f;
+  --color-moss: #667a45;
+  --color-moss-soft: #eef1e7;
+  --color-ink: #243247;
+  --color-muted: #5b6b80;
+  --color-line: #dce3ec;
+  --color-canvas: #f4f7fb;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-warning: #b54708;
+  --color-warning-soft: #fff4e5;
+  --color-amber-banner: #fff7db;
+  --color-amber-border: #e7c25b;
+  --color-success: #2f6b2f;
+  --color-success-soft: #e9f4e9;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Cascadia Mono', Consolas, 'SFMono-Regular', Menlo, monospace;
+}
+
+@layer base {
+  html {
+    font-size: 14px;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply text-navy;
+  }
+}
+
+/* Marcadores Leaflet em DivIcon */
+.farol-marker {
+  background: transparent;
+  border: none;
+}
+.leaflet-container {
+  font-family: var(--font-sans);
+  font-size: 12px;
+}

@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "skills": {
+    "tlc-discover": {
+      "name": "tlc-discover",
+      "source": "local",
+      "contentHash": "518ab626fc8bac4ed1d0c5170b617d1adaec28a83634c1a462c7529d42170d3a",
+      "installedAt": "2026-10-10T11:23:24.923Z",
+      "updatedAt": "2026-10-10T11:23:24.952Z",
+      "agents": [
+        "cursor",
+        "claude-code",
+        "windsurf"
+      ],
+      "method": "copy",
+      "global": false
+    }
+  }
+}

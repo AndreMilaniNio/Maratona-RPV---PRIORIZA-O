@@ -1,0 +1,21 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Node / frontend
+node_modules/
+dist/
+coverage/
+*.local
+
+# Ambiente
+.env
+*.log
+
+# IDE / SO
+.idea/
+.DS_Store
+Thumbs.db
