@@ -22,6 +22,10 @@ public class MapaService(IAppDbContext db, IUsuarioAtual usuario, EscopoMunicipi
             {
                 o.Id, o.Numero, o.Latitude, o.Longitude, o.Prioridade, o.Status, Tipo = o.TipoOcorrencia!.Nome,
                 o.EnderecoCompleto, o.OrigemCoordenada, o.MunicipioId,
+                CircuitoCodigo = o.Subestacao == null ? null : o.Subestacao.Codigo,
+                CircuitoNome = o.Subestacao == null ? null : o.Subestacao.Nome,
+                o.QuantidadeUcs, o.AbertaEm,
+                Descricao = db.Solicitacoes.Where(s => s.OrdemServicoId == o.Id).Select(s => s.Descricao).FirstOrDefault(),
             })
             .ToListAsync(ct);
 
@@ -47,7 +51,8 @@ public class MapaService(IAppDbContext db, IUsuarioAtual usuario, EscopoMunicipi
         return new MapaDto(
             ordens.Where(o => o.Latitude is not null).Select(o => new MapaOsDto(o.Id, o.Numero, o.Latitude!.Value, o.Longitude!.Value,
                 o.Prioridade is null ? null : MapeamentoClassificacao.Resumo(o.Prioridade), o.Status, o.Tipo, o.EnderecoCompleto,
-                o.Prioridade?.Critica ?? false, o.OrigemCoordenada, o.MunicipioId)).ToList(),
+                o.Prioridade?.Critica ?? false, o.OrigemCoordenada, o.MunicipioId,
+                o.CircuitoCodigo, o.CircuitoNome, o.QuantidadeUcs, o.AbertaEm, o.Descricao)).ToList(),
             equipes.Select(e => new MapaEquipeDto(e.Id, e.Codigo, e.Nome, e.Status,
                 e.Status == StatusEquipe.Disponivel && e.Ativos < e.Capacidade, e.Latitude!.Value, e.Longitude!.Value,
                 e.LocalizacaoAtualizadaEm, e.OrigemLocalizacao, e.MunicipioBaseId)).ToList(),

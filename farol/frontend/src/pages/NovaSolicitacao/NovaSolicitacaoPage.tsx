@@ -13,7 +13,7 @@ import { PageHeader, Section } from '@/components/layout/PageHeader';
 import { useCidade } from '@/features/autenticacao/hooks/CidadeProvider';
 import { useCatalogo } from '@/hooks/useCatalogo';
 import { ROTAS } from '@/app/config/navigation';
-import { criarSolicitacaoSchema, paraNovaSolicitacaoRequest, type SolicitacaoFormValues, valoresIniciais } from '@/features/solicitacoes/schemas/solicitacaoSchema';
+import { criarSolicitacaoSchema, faixaDeQuantidade, paraNovaSolicitacaoRequest, type SolicitacaoFormValues, valoresIniciais } from '@/features/solicitacoes/schemas/solicitacaoSchema';
 import { solicitacaoService } from '@/features/solicitacoes/services/solicitacaoService';
 
 function erroDeCampo(erros: Record<string, unknown>, campo: string): string | undefined {
@@ -42,6 +42,7 @@ export default function NovaSolicitacaoPage() {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = form;
   const tipoSelecionado = watch('tipoOcorrenciaId');
   const naoSabeUc = watch('ucNaoInformada');
+  const quantidadeUcs = watch('impacto.quantidadeUcs');
   const tipos = catalogo.data.tiposOcorrencia.filter((tipo) => tipo.ativo);
 
   return <div className="space-y-3">
@@ -59,6 +60,7 @@ export default function NovaSolicitacaoPage() {
         <label className="grid gap-1 text-[13px]"><span>Numero</span><Input {...register('localizacao.numero')} /></label>
         <label className="grid gap-1 text-[13px]"><span>CEP</span><Input {...register('localizacao.cep')} inputMode="numeric" /></label>
         {!naoSabeUc && <label className="grid gap-1 text-[13px]"><span>Unidade consumidora</span><Input {...register('ucs.0.numero')} inputMode="numeric" placeholder="Numero da UC" /></label>}
+        <label className="grid gap-1 text-[13px]"><span>Clientes/UCs atingidos na area</span><Input type="number" min="0" step="1" inputMode="numeric" value={quantidadeUcs ?? ''} onChange={(e) => { const valor = e.target.value === '' ? null : Number(e.target.value); setValue('impacto.quantidadeUcs', valor, { shouldValidate: true }); setValue('impacto.ucsAfetadas', valor === null || !Number.isFinite(valor) ? 'DESCONHECIDA' : faixaDeQuantidade(valor), { shouldValidate: true }); }} placeholder="Ex.: 45" /><span className="text-xs text-muted">Este total tem peso no cálculo da prioridade.</span></label>
         <CheckboxField id="uc-desconhecida" label="Solicitante nao sabe a UC" checked={naoSabeUc} onCheckedChange={(v) => setValue('ucNaoInformada', v, { shouldValidate: true })} />
         {naoSabeUc && <label className="grid gap-1 text-[13px]"><span>Motivo</span><Input {...register('motivoUcNaoInformada')} placeholder="Ex.: solicitante fora do local" /></label>}
       </div></Section>

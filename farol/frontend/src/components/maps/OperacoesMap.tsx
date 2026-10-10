@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link } from 'react-router';
-import { Marker, Popup } from 'react-leaflet';
+import { Marker, Popup, Tooltip } from 'react-leaflet';
 import { BaseMap, FitBounds, FlyTo, CENTRO_PADRAO, temCoordenadas } from '@/components/maps/BaseMap';
 import { iconeEquipe, iconeOs, iconeSubestacao } from '@/components/maps/markers';
 import { PriorityBadge } from '@/features/priorizacao/components/PriorityBadge';
@@ -47,8 +47,12 @@ export function OperacoesMap({
   const equipes = (dados?.equipes ?? []).filter((e) => temCoordenadas(e.latitude, e.longitude));
   const subestacoes = (dados?.subestacoes ?? []).filter((s) => temCoordenadas(s.latitude, s.longitude));
 
+  // Quando há OS visíveis, o mapa deve se orientar por elas. Equipes distantes não
+  // podem puxar o centro para fora do recorte escolhido nos filtros.
   const pontos = React.useMemo<[number, number][]>(
-    () => [...ordens.map((o) => [o.latitude, o.longitude] as [number, number]), ...(mostrarEquipes ? equipes.map((e) => [e.latitude, e.longitude] as [number, number]) : [])],
+    () => ordens.length > 0
+      ? ordens.map((o) => [o.latitude, o.longitude] as [number, number])
+      : [...(mostrarEquipes ? equipes.map((e) => [e.latitude, e.longitude] as [number, number]) : []), ...subestacoes.map((s) => [s.latitude, s.longitude] as [number, number])],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dados, mostrarEquipes],
   );
@@ -112,6 +116,13 @@ function OsMarker({
       eventHandlers={onSelecionar ? { click: () => onSelecionar(os.id) } : undefined}
       title={`OS ${os.numero ?? ''}`}
     >
+      <Tooltip direction="top" offset={[0, -18]} opacity={0.96} sticky>
+        <div style={{ minWidth: 150, fontSize: 13, lineHeight: 1.35 }}>
+          <strong>{os.numero ?? 'OS sem número'}</strong>
+          <div>{os.tipoOcorrencia ?? 'Ocorrência não informada'}</div>
+          <div>Clientes atingidos: {os.quantidadeUcs ?? 'não informado'}</div>
+        </div>
+      </Tooltip>
       <Popup>
         <div style={{ minWidth: 200 }}>
           <Link to={ROTAS.os(os.id)} style={{ fontWeight: 700 }}>
@@ -123,9 +134,25 @@ function OsMarker({
           <div>{os.tipoOcorrencia}</div>
           <div>{STATUS_OS_LABEL[os.status] ?? os.status}</div>
           <div style={{ color: '#5b6b80' }}>{os.endereco}</div>
+          <ResumoOs os={os} compacto />
         </div>
       </Popup>
     </Marker>
+  );
+}
+
+function ResumoOs({ os, compacto = false }: { os: MapaOsDto; compacto?: boolean }) {
+  const descricao = os.descricao?.trim();
+  const breve = descricao && descricao.length > 150 ? `${descricao.slice(0, 147)}...` : descricao;
+  return (
+    <div style={{ maxWidth: 280, fontSize: compacto ? 12 : 13, lineHeight: 1.35 }}>
+      {!compacto && <strong>{os.numero ?? 'OS sem número'}</strong>}
+      <div><b>Clientes/UCs:</b> {os.quantidadeUcs ?? 'não informado'}</div>
+      <div><b>Local:</b> {os.endereco ?? 'não informado'}</div>
+      <div><b>Emissão:</b> {formatDateTime(os.abertaEm)}</div>
+      <div><b>Circuito:</b> {os.circuitoCodigo ? `${os.circuitoCodigo}${os.circuitoNome ? ` — ${os.circuitoNome}` : ''}` : 'não informado'}</div>
+      {breve && <div style={{ marginTop: 4 }}><b>Descrição:</b> {breve}</div>}
+    </div>
   );
 }
 

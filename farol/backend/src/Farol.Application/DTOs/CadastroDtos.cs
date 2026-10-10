@@ -70,7 +70,7 @@ public record CatalogoDto(
 
 public record ConfiguracaoFormularioDto(string FormatoUc, int TransformadorTamanhoMaximo, string FusoHorario, bool DemoHabilitado, bool RoteamentoDisponivel);
 
-public record MapaOsDto(Guid Id, string Numero, double Latitude, double Longitude, PrioridadeResumoDto? Prioridade, StatusOrdemServico Status, string TipoOcorrencia, string? Endereco, bool Critica, OrigemCoordenada? Origem, int MunicipioId);
+public record MapaOsDto(Guid Id, string Numero, double Latitude, double Longitude, PrioridadeResumoDto? Prioridade, StatusOrdemServico Status, string TipoOcorrencia, string? Endereco, bool Critica, OrigemCoordenada? Origem, int MunicipioId, string? CircuitoCodigo, string? CircuitoNome, int? QuantidadeUcs, DateTimeOffset AbertaEm, string? Descricao);
 public record MapaEquipeDto(int Id, string Codigo, string Nome, StatusEquipe Status, bool Disponivel, double Latitude, double Longitude, DateTimeOffset? LocalizacaoEm, OrigemLocalizacaoEquipe? Origem, int MunicipioId);
 public record MapaSubestacaoDto(int Id, string Codigo, string Nome, double Latitude, double Longitude, bool Demonstrativo);
 public record MapaDto(List<MapaOsDto> Ordens, List<MapaEquipeDto> Equipes, List<MapaSubestacaoDto> Subestacoes, int SemCoordenadas, double? CentroLatitude, double? CentroLongitude);

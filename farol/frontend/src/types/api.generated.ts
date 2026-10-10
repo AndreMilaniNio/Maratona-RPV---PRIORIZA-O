@@ -701,6 +701,11 @@ export interface MapaOsDto {
   critica: boolean;
   origem: OrigemCoordenada;
   municipioId: number;
+  circuitoCodigo: string | null;
+  circuitoNome: string | null;
+  quantidadeUcs: number | null;
+  abertaEm: string;
+  descricao: string | null;
 }
 
 export interface MapaSubestacaoDto {
