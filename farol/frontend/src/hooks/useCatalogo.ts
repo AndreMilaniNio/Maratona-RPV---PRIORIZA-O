@@ -1,17 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api/client';
 import { queryKeys } from '@/services/api/queryKeys';
+import { useCidade } from '@/features/autenticacao/hooks/CidadeProvider';
 import type { CatalogoDto, CriterioFormularioDto } from '@/types/api';
 
 export const catalogoService = {
-  obter: () => api.get<CatalogoDto>('/api/catalogo'),
+  obter: (municipioId: number | null) => api.get<CatalogoDto>('/api/catalogo', municipioId === null ? undefined : { municipioId }),
 };
 
 /** Catálogo (municípios, tipos de ocorrência, classes, critérios e opções, prioridades, configuração). */
 export function useCatalogo() {
+  const { municipioId } = useCidade();
   return useQuery({
-    queryKey: queryKeys.catalogo,
-    queryFn: catalogoService.obter,
+    queryKey: [...queryKeys.catalogo, municipioId],
+    queryFn: () => catalogoService.obter(municipioId),
     staleTime: 5 * 60_000,
   });
 }

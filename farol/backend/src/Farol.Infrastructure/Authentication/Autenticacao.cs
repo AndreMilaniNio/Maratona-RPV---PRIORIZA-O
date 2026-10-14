@@ -47,8 +47,10 @@ public class TokenService(IOptions<JwtOptions> opcoes)
 /// Usuário da requisição. Permissões derivam dos perfis; municípios vêm do banco a cada requisição,
 /// para que um vínculo removido valha imediatamente. Rotinas internas (semeadura) podem personificar um usuário.
 /// </summary>
-public class UsuarioAtual(IHttpContextAccessor http, FarolDbContext db) : IUsuarioAtual
+public class UsuarioAtual(IHttpContextAccessor http, FarolDbContext db, IOptions<FarolOptions> opcoes) : IUsuarioAtual
 {
+    public static readonly Guid OperadorUnicoId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private readonly bool _modoOperadorUnico = opcoes.Value.ModoOperadorUnico;
     private (Guid Id, string Nome, string[] Perfis)? _personificado;
     private IReadOnlySet<int>? _municipios;
     private bool _municipiosCarregados;
@@ -64,14 +66,14 @@ public class UsuarioAtual(IHttpContextAccessor http, FarolDbContext db) : IUsuar
         _equipeCarregada = false;
     }
 
-    public bool Autenticado => _personificado is not null || Principal?.Identity?.IsAuthenticated == true;
+    public bool Autenticado => _modoOperadorUnico || _personificado is not null || Principal?.Identity?.IsAuthenticated == true;
 
-    public Guid Id => _personificado?.Id
+    public Guid Id => _modoOperadorUnico ? OperadorUnicoId : _personificado?.Id
                       ?? (Guid.TryParse(Principal?.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : Guid.Empty);
 
-    public string Nome => _personificado?.Nome ?? Principal?.FindFirstValue("nome") ?? "Sistema";
+    public string Nome => _modoOperadorUnico ? "Operador do sistema" : _personificado?.Nome ?? Principal?.FindFirstValue("nome") ?? "Sistema";
 
-    public IReadOnlyList<string> Perfis => (IReadOnlyList<string>?)_personificado?.Perfis
+    public IReadOnlyList<string> Perfis => _modoOperadorUnico ? [Application.Common.Perfis.Administrador] : (IReadOnlyList<string>?)_personificado?.Perfis
                                            ?? Principal?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList()
                                            ?? [];
 
@@ -83,6 +85,7 @@ public class UsuarioAtual(IHttpContextAccessor http, FarolDbContext db) : IUsuar
 
     public async Task<IReadOnlySet<int>?> MunicipiosPermitidosAsync(CancellationToken ct = default)
     {
+        if (_modoOperadorUnico) return null;
         if (!Autenticado) return new HashSet<int>();
         if (Tem(Application.Common.Permissoes.CidadesTodas)) return null;
         if (_municipiosCarregados) return _municipios;
@@ -94,6 +97,7 @@ public class UsuarioAtual(IHttpContextAccessor http, FarolDbContext db) : IUsuar
 
     public async Task<int?> EquipeIdAsync(CancellationToken ct = default)
     {
+        if (_modoOperadorUnico) return null;
         if (_equipeCarregada) return _equipeId;
         var id = Id;
         _equipeId = await db.Users.AsNoTracking().Where(u => u.Id == id).Select(u => u.EquipeId).FirstOrDefaultAsync(ct);

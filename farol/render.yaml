@@ -1,0 +1,25 @@
+# API do Farol no Render. O banco permanece no Supabase; por isso a cadeia de
+# conexão é informada no Dashboard e nunca é versionada neste arquivo.
+services:
+  - type: web
+    name: farol-api
+    runtime: docker
+    region: virginia
+    plan: free
+    dockerContext: .
+    dockerfilePath: backend/Dockerfile
+    autoDeployTrigger: commit
+    healthCheckPath: /api/saude
+    envVars:
+      - key: ConnectionStrings__Farol
+        sync: false
+      - key: Jwt__Chave
+        generateValue: true
+      - key: Farol__Cors__Origens__0
+        sync: false
+      - key: Farol__ModoOperadorUnico
+        value: "false"
+      - key: Farol__Banco__InicializarAoSubir
+        value: "true"
+      - key: Farol__Demo__Habilitado
+        value: "false"

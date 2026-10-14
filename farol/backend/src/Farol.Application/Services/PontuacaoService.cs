@@ -22,6 +22,7 @@ public class PontuacaoService(
     IRelogio relogio,
     INotificadorFila notificador,
     Auditor auditor,
+    EscopoMunicipio escopo,
     ServicoClassificacao classificacao,
     MontadorOrdemServico montador,
     IOptions<FarolOptions> opcoes)
@@ -30,6 +31,7 @@ public class PontuacaoService(
 
     public async Task<ConfiguracaoPontuacaoDto> ObterAsync(int? municipioId, CancellationToken ct = default)
     {
+        await ExigirEscopoAsync(municipioId, municipioId is { } id ? id : "global", ct);
         var agora = relogio.Agora;
         string escopo = "Global";
         VersaoPontuacao vigente;
@@ -63,6 +65,7 @@ public class PontuacaoService(
     /// <summary>Cria o rascunho do escopo copiando a versão vigente (ou a indicada, ao restaurar).</summary>
     public async Task<VersaoDetalheDto> CriarRascunhoAsync(int? municipioId, int? copiarDeId = null, CancellationToken ct = default)
     {
+        await ExigirEscopoAsync(municipioId, municipioId is { } id ? id : "global", ct);
         if (await db.VersoesPontuacao.AnyAsync(v => v.MunicipioId == municipioId &&
                 (v.Status == StatusVersaoPontuacao.Rascunho || v.Status == StatusVersaoPontuacao.AguardandoAprovacao), ct))
             throw new ConflitoException("Já existe um rascunho ou uma versão aguardando aprovação neste escopo.");
@@ -106,6 +109,7 @@ public class PontuacaoService(
     public async Task DescartarRascunhoAsync(int versaoId, CancellationToken ct = default)
     {
         var v = await db.VersoesPontuacao.FirstOrDefaultAsync(x => x.Id == versaoId, ct) ?? throw new NaoEncontradoException("Versão não encontrada.");
+        await ExigirEscopoAsync(v.MunicipioId, versaoId, ct);
         if (v.Status != StatusVersaoPontuacao.Rascunho) throw new ConflitoException("Só rascunhos podem ser descartados.");
         db.VersoesPontuacao.Remove(v);
         auditor.Registrar(AcoesAuditoria.EditarPontuacao, "VersaoPontuacao", v.Id, v.MunicipioId, novos: new { acao = "rascunho descartado", v.Numero });
@@ -117,6 +121,7 @@ public class PontuacaoService(
     {
         var v = await db.VersoesPontuacao.Include(x => x.Pontos).Include(x => x.Faixas).Include(x => x.Criterios)
             .FirstOrDefaultAsync(x => x.Id == r.VersaoId, ct) ?? throw new NaoEncontradoException("Rascunho não encontrado.");
+        await ExigirEscopoAsync(v.MunicipioId, r.VersaoId, ct);
         if (v.Status != StatusVersaoPontuacao.Rascunho) throw new ConflitoException("Esta versão não é um rascunho editável.");
         if (!uint.TryParse(r.Token, out var token)) throw new RegraNegocioException("Token de versão inválido.");
         db.Entry(v).Property(x => x.Versao).OriginalValue = token;
@@ -184,6 +189,7 @@ public class PontuacaoService(
     /// <summary>Simulador: mesmo montador e mesmo motor da produção, com o rascunho ou a versão escolhida.</summary>
     public async Task<ClassificacaoDto> SimularAsync(SimularRequest r, CancellationToken ct = default)
     {
+        await ExigirEscopoAsync(r.MunicipioId, r.MunicipioId, ct);
         var agora = relogio.Agora;
         var solicitacao = r.Solicitacao with { MunicipioId = r.MunicipioId, ChaveIdempotencia = Guid.NewGuid() };
         var montada = await montador.MontarAsync(solicitacao, agora, ct);
@@ -213,6 +219,7 @@ public class PontuacaoService(
     {
         var versao = await db.VersoesPontuacao.AsNoTracking().FirstOrDefaultAsync(v => v.Id == versaoId, ct)
                      ?? throw new NaoEncontradoException("Versão não encontrada.");
+        await ExigirEscopoAsync(versao.MunicipioId, versaoId, ct);
         var afetadas = await OsAfetadasAsync(versao, ct);
         var prioridades = await db.Prioridades.AsNoTracking().ToDictionaryAsync(p => p.Id, ct);
         var nomes = await db.Municipios.AsNoTracking().ToDictionaryAsync(m => m.Id, m => m.Nome, ct);
@@ -248,6 +255,7 @@ public class PontuacaoService(
         if (vigencia < agora.AddMinutes(-5)) throw new RegraNegocioException("A vigência não pode começar no passado.");
 
         var v = await db.VersoesPontuacao.FirstOrDefaultAsync(x => x.Id == r.VersaoId, ct) ?? throw new NaoEncontradoException("Versão não encontrada.");
+        await ExigirEscopoAsync(v.MunicipioId, r.VersaoId, ct);
         if (v.Status != StatusVersaoPontuacao.Rascunho) throw new ConflitoException("Só um rascunho pode ser publicado.");
 
         var config = await classificacao.CarregarAsync(v.Id, v.MunicipioId, ct);
@@ -279,6 +287,7 @@ public class PontuacaoService(
     public async Task<VersaoDetalheDto> AprovarAsync(int versaoId, CancellationToken ct = default)
     {
         var v = await db.VersoesPontuacao.FirstOrDefaultAsync(x => x.Id == versaoId, ct) ?? throw new NaoEncontradoException("Versão não encontrada.");
+        await ExigirEscopoAsync(v.MunicipioId, versaoId, ct);
         if (v.Status != StatusVersaoPontuacao.AguardandoAprovacao) throw new ConflitoException("A versão não está aguardando aprovação.");
         if (v.PublicadaPorId == usuario.Id || v.AutorId == usuario.Id) throw new ConflitoException("A aprovação deve ser feita por outro usuário.");
         v.AprovadaPorId = usuario.Id;
@@ -292,6 +301,7 @@ public class PontuacaoService(
     public async Task<VersaoDetalheDto> RejeitarAsync(int versaoId, string? motivo, CancellationToken ct = default)
     {
         var v = await db.VersoesPontuacao.FirstOrDefaultAsync(x => x.Id == versaoId, ct) ?? throw new NaoEncontradoException("Versão não encontrada.");
+        await ExigirEscopoAsync(v.MunicipioId, versaoId, ct);
         if (v.Status != StatusVersaoPontuacao.AguardandoAprovacao) throw new ConflitoException("A versão não está aguardando aprovação.");
         v.Status = StatusVersaoPontuacao.Rascunho;
         v.AlteradaEm = relogio.Agora;
@@ -358,6 +368,7 @@ public class PontuacaoService(
 
     public async Task<List<VersaoListaDto>> VersoesAsync(int? municipioId, CancellationToken ct = default)
     {
+        await ExigirEscopoAsync(municipioId, municipioId is { } id ? id : "global", ct);
         var agora = relogio.Agora;
         var vigenteId = municipioId is { } m ? (await classificacao.VersaoVigenteAsync(m, agora, ct)).Id : (await VigenteGlobalAsync(agora, ct)).Id;
         var lista = await db.VersoesPontuacao.AsNoTracking().Include(v => v.Municipio)
@@ -407,6 +418,7 @@ public class PontuacaoService(
     {
         var v = await db.VersoesPontuacao.AsNoTracking().Include(x => x.Municipio).Include(x => x.Pontos).Include(x => x.Faixas).Include(x => x.Criterios)
             .FirstOrDefaultAsync(x => x.Id == versaoId, ct) ?? throw new NaoEncontradoException("Versão não encontrada.");
+        await ExigirEscopoAsync(v.MunicipioId, versaoId, ct);
         var criterios = await db.Criterios.AsNoTracking().Include(c => c.Opcoes).Include(c => c.Municipios).Where(c => c.Ativo)
             .OrderBy(c => c.Ordem).ThenBy(c => c.Id).ToListAsync(ct);
         var prioridades = await db.Prioridades.AsNoTracking().Where(p => p.Ativo).OrderBy(p => p.Rank).ToListAsync(ct);
@@ -539,6 +551,11 @@ public class PontuacaoService(
             r.Condicoes.Select(c => new CondicaoDto(c.Criterio, criterios.TryGetValue(c.Criterio, out var cr) ? cr.Nome : c.Criterio, c.Opcoes.ToList(),
                 c.Opcoes.Select(o => cr?.Opcoes.FirstOrDefault(x => x.Codigo == o)?.Rotulo ?? o).ToList())).ToList(),
             r.NivelPrecedencia, r.PrioridadeMinimaId, r.PrioridadeMinima?.Nome ?? "", r.Ativa, r.Demonstrativa, r.Versao, r.AprovadaEm);
+
+    private Task ExigirEscopoAsync(int? municipioId, object entidadeId, CancellationToken ct) =>
+        municipioId is { } id
+            ? escopo.ExigirAsync(id, "VersaoPontuacao", entidadeId, ct)
+            : Task.CompletedTask;
 
     private async Task<VersaoPontuacao> VigenteGlobalAsync(DateTimeOffset agora, CancellationToken ct) =>
         await db.VersoesPontuacao.AsNoTracking()

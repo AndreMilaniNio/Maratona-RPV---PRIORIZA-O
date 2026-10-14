@@ -1,5 +1,6 @@
 import {
   ClipboardList,
+  BookOpen,
   FilePlus2,
   Gauge,
   History,
@@ -44,6 +45,7 @@ export const ROTAS = {
   prioridades: '/admin/codigos-prazos',
   cadastros: '/admin/cadastros',
   usuarios: '/admin/usuarios',
+  suporte: '/suporte',
 } as const;
 
 export const NAVEGACAO: GrupoNavegacao[] = [
@@ -74,7 +76,7 @@ export const NAVEGACAO: GrupoNavegacao[] = [
     itens: [
       {
         to: ROTAS.pontuacao,
-        label: 'Pontuação (Usuário Chave)',
+        label: 'Formulário e pontuação',
         icon: Gauge,
         requisito: { algumaDe: [PERMISSOES.osConsultar, PERMISSOES.pontuacaoEditar] },
       },
@@ -89,6 +91,10 @@ export const NAVEGACAO: GrupoNavegacao[] = [
       { to: ROTAS.usuarios, label: 'Usuários e permissões', icon: Users, requisito: { todas: [PERMISSOES.usuariosAdministrar] } },
       { to: ROTAS.auditoria, label: 'Histórico / auditoria', icon: History, requisito: { todas: [PERMISSOES.auditoriaConsultar] } },
     ],
+  },
+  {
+    titulo: 'Ajuda',
+    itens: [{ to: ROTAS.suporte, label: 'Suporte e guia', icon: BookOpen, requisito: { todas: [PERMISSOES.osConsultar] } }],
   },
 ];
 

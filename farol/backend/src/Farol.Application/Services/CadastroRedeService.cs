@@ -131,9 +131,11 @@ public class CadastroRedeService(
             MontadorOrdemServico.AlertasCoordenada(c, municipio), null);
     }
 
-    public async Task<CatalogoDto> CatalogoAsync(CancellationToken ct = default)
+    public async Task<CatalogoDto> CatalogoAsync(int? municipioId = null, CancellationToken ct = default)
     {
-        var criterios = await db.Criterios.AsNoTracking().Include(c => c.Opcoes).Where(c => c.Ativo).OrderBy(c => c.Ordem).ToListAsync(ct);
+        var criterios = await db.Criterios.AsNoTracking().Include(c => c.Opcoes).Include(c => c.Municipios)
+            .Where(c => c.Ativo && (c.Municipios.Count == 0 || municipioId == null || c.Municipios.Any(m => m.MunicipioId == municipioId)))
+            .OrderBy(c => c.Ordem).ToListAsync(ct);
         CriterioFormularioDto Criterio(Criterio c) => new(c.Id, c.Codigo, c.Nome, c.Descricao, c.MultiplaEscolha,
             c.Opcoes.Where(o => o.Ativa).OrderBy(o => o.Ordem).Select(o => new OpcaoFormularioDto(o.Id, o.Codigo, o.Rotulo, o.RepresentaDesconhecido)).ToList());
 

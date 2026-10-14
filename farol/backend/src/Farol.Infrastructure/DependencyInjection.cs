@@ -24,6 +24,8 @@ public static class DependencyInjection
         {
             npg.MigrationsAssembly(typeof(FarolDbContext).Assembly.FullName);
             npg.MigrationsHistoryTable("__ef_migracoes");
+            // Uma conexão gerenciada remota pode sofrer falhas transitórias.
+            npg.EnableRetryOnFailure();
         }));
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<FarolDbContext>());
 

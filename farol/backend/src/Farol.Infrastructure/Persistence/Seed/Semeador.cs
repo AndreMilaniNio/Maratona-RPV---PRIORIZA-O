@@ -2,6 +2,7 @@ using Farol.Application.Common;
 using Farol.Domain.Entities;
 using Farol.Domain.Enums;
 using Farol.Infrastructure.Persistence.Context;
+using Farol.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -32,6 +33,8 @@ public class Semeador(
         foreach (var perfil in Perfis.Todos)
             if (!await perfis.RoleExistsAsync(perfil))
                 await perfis.CreateAsync(new IdentityRole<Guid>(perfil));
+
+        await CriarOperadorUnicoAsync(ct);
 
         if (!await db.Criterios.AnyAsync(ct))
         {
@@ -158,5 +161,28 @@ public class Semeador(
         }
         await usuarios.AddToRoleAsync(admin, Perfis.Administrador);
         logger.LogInformation("Administrador inicial criado para {Email}. Troque a senha após o primeiro acesso.", email);
+    }
+
+    /// <summary>Cria a identidade técnica usada pelo modo local sem tela de login.</summary>
+    private async Task CriarOperadorUnicoAsync(CancellationToken ct)
+    {
+        if (!opcoes.Value.ModoOperadorUnico || await usuarios.FindByIdAsync(UsuarioAtual.OperadorUnicoId.ToString()) is not null) return;
+
+        var operador = new Usuario
+        {
+            Id = UsuarioAtual.OperadorUnicoId,
+            UserName = "operador.local@farol",
+            Email = "operador.local@farol",
+            EmailConfirmed = true,
+            Nome = "Operador do sistema",
+            Ativo = true,
+        };
+        var resultado = await usuarios.CreateAsync(operador, "OperadorLocalSemLogin2026!");
+        if (!resultado.Succeeded)
+        {
+            logger.LogError("Operador único não criado: {Erros}", string.Join("; ", resultado.Errors.Select(e => e.Description)));
+            return;
+        }
+        await usuarios.AddToRoleAsync(operador, Perfis.Administrador);
     }
 }

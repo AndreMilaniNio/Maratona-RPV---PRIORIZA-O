@@ -18,6 +18,7 @@ using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
+var modoOperadorUnico = config.GetValue<bool>("Farol:ModoOperadorUnico", true);
 
 builder.Services.Configure<FarolOptions>(config.GetSection(FarolOptions.Secao));
 builder.Services.AddApplication();
@@ -31,7 +32,9 @@ builder.Services.AddSignalR().AddJsonProtocol(o => o.PayloadSerializerOptions.Co
 
 // Autenticação JWT
 var jwt = config.GetSection(JwtOptions.Secao).Get<JwtOptions>() ?? new JwtOptions();
-if (jwt.Chave.Length < 32)
+if (modoOperadorUnico && jwt.Chave.Length < 32)
+    jwt.Chave = "modo-operador-unico-local-sem-login-2026";
+if (!modoOperadorUnico && jwt.Chave.Length < 32)
     throw new InvalidOperationException("Defina Jwt__Chave com ao menos 32 caracteres (veja .env.example).");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
@@ -58,13 +61,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             },
         };
     });
+if (modoOperadorUnico)
+    builder.Services.PostConfigure<JwtOptions>(o =>
+    {
+        if (o.Chave.Length < 32) o.Chave = jwt.Chave;
+    });
 
 // Uma policy por permissão; as permissões derivam dos perfis do token.
 builder.Services.AddAuthorization(o =>
 {
+    if (modoOperadorUnico)
+        o.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+            .RequireAssertion(_ => true).Build();
     foreach (var permissao in Permissoes.Todas)
-        o.AddPolicy(permissao, p => p.RequireAuthenticatedUser().RequireAssertion(ctx =>
-            Perfis.PermissoesDe(ctx.User.FindAll(ClaimTypes.Role).Select(c => c.Value)).Contains(permissao)));
+        o.AddPolicy(permissao, p => p.RequireAssertion(ctx => modoOperadorUnico ||
+            (ctx.User.Identity?.IsAuthenticated == true && Perfis.PermissoesDe(ctx.User.FindAll(ClaimTypes.Role).Select(c => c.Value)).Contains(permissao))));
 });
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p

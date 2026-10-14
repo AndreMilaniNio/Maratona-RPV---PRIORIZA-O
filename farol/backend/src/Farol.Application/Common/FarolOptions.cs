@@ -7,6 +7,8 @@ public class FarolOptions
 
     /// <summary>Fuso para exibição e calendário útil. Instantes ficam em UTC no banco.</summary>
     public string FusoHorario { get; set; } = "America/Sao_Paulo";
+    /// <summary>Modo local de operador único: dispensa login, preservando auditoria com uma identidade interna.</summary>
+    public bool ModoOperadorUnico { get; set; } = true;
 
     public UcOptions Uc { get; set; } = new();
     public TransformadorOptions Transformador { get; set; } = new();

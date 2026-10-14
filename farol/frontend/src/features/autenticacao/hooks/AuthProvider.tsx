@@ -24,7 +24,7 @@ export const AuthContext = React.createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [usuario, setUsuario] = React.useState<UsuarioSessaoDto | null>(null);
-  const [estado, setEstado] = React.useState<EstadoSessao>(() => (tokenStorage.get() ? 'verificando' : 'anonimo'));
+  const [estado, setEstado] = React.useState<EstadoSessao>('verificando');
   const [motivoSaida, setMotivoSaida] = React.useState<string | null>(null);
 
   const logout = React.useCallback(

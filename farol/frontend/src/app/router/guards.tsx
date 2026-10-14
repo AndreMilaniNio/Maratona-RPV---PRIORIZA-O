@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router';
+import { Outlet } from 'react-router';
 import { ShieldOff } from 'lucide-react';
 import { useAuth } from '@/features/autenticacao/hooks/AuthProvider';
 import { LoadingState, EmptyState } from '@/components/feedback/states';
@@ -8,9 +8,7 @@ import type { RequisitoPermissao } from '@/lib/permissions';
 /** Exige sessão; sem sessão, vai ao Login guardando a rota de origem. */
 export function RequireAuth() {
   const { estado } = useAuth();
-  const location = useLocation();
   if (estado === 'verificando') return <LoadingState label="Verificando sessão…" className="justify-center py-20" />;
-  if (estado === 'anonimo') return <Navigate to="/login" replace state={{ de: location.pathname + location.search }} />;
   return <Outlet />;
 }
 

@@ -13,7 +13,7 @@ namespace Farol.API.Controllers;
 public class CadastrosController(CadastroRedeService servico) : ControllerBase
 {
     [HttpGet("catalogo")]
-    public Task<CatalogoDto> Catalogo(CancellationToken ct) => servico.CatalogoAsync(ct);
+    public Task<CatalogoDto> Catalogo([FromQuery] int? municipioId, CancellationToken ct) => servico.CatalogoAsync(municipioId, ct);
 
     [HttpGet("municipios")]
     public Task<List<MunicipioDto>> Municipios([FromQuery] bool todos, CancellationToken ct) => servico.MunicipiosAsync(!todos, ct);
@@ -59,7 +59,7 @@ public class CadastrosController(CadastroRedeService servico) : ControllerBase
 public class ConfiguracoesController(AdminService admin, CadastroRedeService cadastros) : ControllerBase
 {
     [HttpGet("prioridades")]
-    public async Task<List<PrioridadeDto>> Prioridades(CancellationToken ct) => (await cadastros.CatalogoAsync(ct)).Prioridades;
+    public async Task<List<PrioridadeDto>> Prioridades(CancellationToken ct) => (await cadastros.CatalogoAsync(ct: ct)).Prioridades;
 
     [HttpGet("regras")]
     public Task<List<RegraPrecedenciaDto>> Regras(CancellationToken ct) => admin.RegrasAsync(ct);

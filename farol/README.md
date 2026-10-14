@@ -9,6 +9,10 @@ Uma solicitação registrada na tela **Nova Solicitação** gera uma OS no Postg
 - Regras de negócio e premissas: [`docs/regras-de-negocio.md`](docs/regras-de-negocio.md)
 - Contrato OpenAPI exportado: [`docs/openapi.json`](docs/openapi.json) (Swagger em `/swagger` com a API rodando)
 
+## Modo local de operador único
+
+Por padrão, `Farol:ModoOperadorUnico` está ativado. A aplicação abre sem tela de login e usa uma identidade interna de administrador apenas para manter auditoria, permissões e referências de banco consistentes. Esse modo é destinado a demonstração e desenvolvimento local; não exponha a API publicamente enquanto ele estiver ativo.
+
 ## Estrutura
 
 ```text
